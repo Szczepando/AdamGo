@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdamGo Dev</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #e8e0d5;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      color: #f5e6d3;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .game-container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .board-wrapper {
+      background: linear-gradient(145deg, #d4a574 0%, #c4956a 50%, #b8895e 100%);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    
+    .board-with-coords {
+      display: grid;
+      grid-template-columns: 24px repeat(18, 28px);
+      grid-template-rows: 24px repeat(18, 28px);
+    }
+    
+    .coord {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #5d4037;
+    }
+    
+    .board {
+      display: contents;
+    }
+    
+    .cell {
+      width: 28px;
+      height: 28px;
+      background: #d4a574;
+      border: 1px solid rgba(139, 90, 43, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s;
+    }
+    
+    .cell:hover:not(.occupied) { background: rgba(255,255,255,0.15); }
+    
+    .cell.area-border-right { border-right: 2px solid rgba(101, 67, 33, 0.6); }
+    .cell.area-border-bottom { border-bottom: 2px solid rgba(101, 67, 33, 0.6); }
+    
+    .cell.black-start {
+      background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(0,0,0,0.35) 4px, rgba(0,0,0,0.35) 6px), #d4a574;
+    }
+    .cell.white-start {
+      background: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.5) 4px, rgba(255,255,255,0.5) 6px), #d4a574;
+    }
+    
+    .cell.black-control { background-color: rgba(0,0,0,0.12); }
+    .cell.white-control { background-color: rgba(255,255,255,0.18); }
+    
+    .stone {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      position: absolute;
+      transition: transform 0.1s;
+    }
+    
+    .stone.black {
+      background: radial-gradient(circle at 30% 30%, #4a4a4a, #1a1a1a 60%, #000);
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.4), inset -1px -1px 2px rgba(255,255,255,0.1);
+    }
+    
+    .stone.white {
+      background: radial-gradient(circle at 30% 30%, #fff, #e8e8e8 60%, #d0d0d0);
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.3), inset -1px -1px 2px rgba(0,0,0,0.05);
+    }
+    
+    .info-panel {
+      background: rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 20px;
+      min-width: 220px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .turn-info {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .current-player {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .stones-remaining {
+      font-size: 0.9rem;
+      color: #b0a090;
+    }
+    
+    .scores {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+    }
+    
+    .score-item {
+      text-align: center;
+    }
+    
+    .score-label {
+      font-size: 0.8rem;
+      color: #a0a0a0;
+      margin-bottom: 4px;
+    }
+    
+    .score-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-save {
+      background: #6b5b4f;
+      color: white;
+    }
+    .btn-save:hover { background: #7d6b5f; }
+    .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-pass {
+      background: #6b5b4f;
+      color: white;
+    }
+    .btn-pass:hover { background: #7d6b5f; }
+    .btn-pass:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-undo {
+      background: #888;
+      color: white;
+    }
+    .btn-undo:hover { background: #999; }
+    .btn-undo:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-reset {
+      background: #c75050;
+      color: white;
+    }
+    .btn-reset:hover { background: #d76060; }
+    
+    .game-over {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 40px;
+      border-radius: 12px;
+      text-align: center;
+      z-index: 100;
+    }
+    
+    .game-over h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+    
+    .hidden { display: none; }
+    
+    .log {
+      margin-top: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.2);
+      border-radius: 6px;
+      padding: 10px;
+    }
+    
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>AdamGo Dev</h1>
+  
+  <div class="game-container">
+    <div class="board-wrapper">
+      <div class="board-with-coords" id="board-container"></div>
+    </div>
+    
+    <div class="info-panel">
+      <div class="turn-info">
+        <div class="current-player" id="current-player">Black's Turn</div>
+        <div class="stones-remaining" id="stones-remaining">Stones: 1 remaining</div>
+      </div>
+      
+      <div class="scores">
+        <div class="score-item">
+          <div class="score-label">Black Areas</div>
+          <div class="score-value" id="black-score">0</div>
+        </div>
+        <div class="score-item">
+          <div class="score-label">White Areas</div>
+          <div class="score-value" id="white-score">0</div>
+        </div>
+      </div>
+      
+      <div class="buttons">
+        <button class="btn-save" id="btn-save" onclick="saveStones()"><p  id="save-stones">Save stones</p></button>
+        <button class="btn-pass" id="btn-pass" onclick="pass()">Pass</button>
+        <button class="btn-undo" id="btn-undo" onclick="undoMove()">Undo</button>
+        <button class="btn-reset" onclick="resetGame()">New Game</button>
+      </div>
+      
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+  
+  <div class="game-over hidden" id="game-over">
+    <h2 id="winner-text">Game Over</h2>
+    <button class="btn-reset" onclick="resetGame()">Play Again</button>
+  </div>
+
+  <script>
+    const BOARD_SIZE = 18;
+    const AREA_SIZE = 3;
+    const COLS = 'ABCDEFGHIJKLMNOPQR';
+    
+    let state = {
+      board: [],
+      currentPlayer: 'black',
+      stonesPlacedThisTurn: 0,
+      stonesRemainingBlack: 0,
+      stonesRemainingWhite: 0,
+      turnNumber: 1,
+      lastPlayerPassed: false,
+      gameOver: false,
+      winner: null
+    };
+    
+    // Add undo move functionality
+    let stateHistory = []
+    
+    // Initialize
+    function init() {
+      createBoard();
+      resetGame();
+      // removelogs
+      console.log("Init complete");
+    }
+    
+    function createBoard() {
+      const container = document.getElementById('board-container');
+      container.innerHTML = '';
+      
+      // Corner spacer
+      container.appendChild(createDiv('coord', ''));
+      
+      // Column labels (A-R)
+      for (let c = 0; c < BOARD_SIZE; c++) {
+        container.appendChild(createDiv('coord', COLS[c]));
+      }
+      
+      // Rows with labels
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        // Row label (18 at top, 1 at bottom)
+        container.appendChild(createDiv('coord', String(BOARD_SIZE - r)));
+        
+        // Cells
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          const cell = createDiv('cell', '');
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          
+          // Area borders
+          if ((c + 1) % AREA_SIZE === 0 && c < BOARD_SIZE - 1) cell.classList.add('area-border-right');
+          if ((r + 1) % AREA_SIZE === 0 && r < BOARD_SIZE - 1) cell.classList.add('area-border-bottom');
+          
+          // Starting areas
+          const areaRow = Math.floor(r / AREA_SIZE);
+          const areaCol = Math.floor(c / AREA_SIZE);
+          if (areaRow === 5 && areaCol === 0) cell.classList.add('black-start');
+          if (areaRow === 0 && areaCol === 5) cell.classList.add('white-start');
+          
+          cell.onclick = () => handleCellClick(r, c);
+          container.appendChild(cell);
+        }
+      }
+    }
+    
+    function createDiv(className, text) {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = text;
+      return div;
+    }
+    
+    function resetGame() {
+      state = {
+        board: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null)),
+        currentPlayer: 'black',
+        stonesPlacedThisTurn: 0,
+        stonesRemainingBlack: 0,
+        stonesRemainingWhite: 0,
+        turnNumber: 1,
+        lastPlayerPassed: false,
+        gameOver: false,
+        winner: null
+      };
+      document.getElementById('game-over').classList.add('hidden');
+      document.getElementById('log').innerHTML = '';
+      render();
+    }
+    
+    function getStonesForTurn() {
+      if (state.turnNumber === 1 && state.currentPlayer === 'black') return 1;
+      return ((state.currentPlayer === 'black') ? state.stonesRemainingBlack : state.stonesRemainingWhite) + 2;
+    }
+    
+    function getStonesRemaining() {
+      return getStonesForTurn() - state.stonesPlacedThisTurn;
+    }
+    
+    function getAreaControl(areaRow, areaCol) {
+      let blackScore = 0, whiteScore = 0;
+      const startR = areaRow * AREA_SIZE;
+      const startC = areaCol * AREA_SIZE;
+      
+      for (let r = 0; r < AREA_SIZE; r++) {
+        for (let c = 0; c < AREA_SIZE; c++) {
+          const cell = state.board[startR + r][startC + c];
+          const isMiddle = r === 1 && c === 1;
+          const points = isMiddle ? 2 : 1;
+          if (cell === 'black') blackScore += points;
+          else if (cell === 'white') whiteScore += points;
+        }
+      }
+      
+      if (blackScore > whiteScore) return 'black';
+      if (whiteScore > blackScore) return 'white';
+      return null;
+    }
+    
+    function hasStoneInArea(areaRow, areaCol, player) {
+      const startR = areaRow * AREA_SIZE;
+      const startC = areaCol * AREA_SIZE;
+      
+      for (let r = 0; r < AREA_SIZE; r++) {
+        for (let c = 0; c < AREA_SIZE; c++) {
+          if (state.board[startR + r][startC + c] === player) return true;
+        }
+      }
+      return false;
+    }
+    
+    function getMiddleSquareOfEdge(fromArea, toArea) {
+      const [fr, fc] = fromArea;
+      const [tr, tc] = toArea;
+      const dr = tr - fr, dc = tc - fc;
+      
+      // Only cardinal directions (no diagonals)
+      if (Math.abs(dr) + Math.abs(dc) !== 1) return null;
+      
+      const startR = fr * AREA_SIZE;
+      const startC = fc * AREA_SIZE;
+      
+      if (dr === -1) return [startR, startC + 1]; // Up
+      if (dr === 1) return [startR + 2, startC + 1]; // Down
+      if (dc === -1) return [startR + 1, startC]; // Left
+      if (dc === 1) return [startR + 1, startC + 2]; // Right
+      return null;
+    }
+    
+    function hasConnectionToArea(areaRow, areaCol, player) {
+      const opponent = player === 'black' ? 'white' : 'black';
+      const neighbors = [
+        [areaRow - 1, areaCol], [areaRow + 1, areaCol],
+        [areaRow, areaCol - 1], [areaRow, areaCol + 1]
+      ].filter(([r, c]) => r >= 0 && r < 6 && c >= 0 && c < 6);
+      
+      for (const [nr, nc] of neighbors) {
+        const control = getAreaControl(nr, nc);
+        // Skip if opponent controls this neighboring area
+        if (control === opponent) continue;
+        
+        const middle = getMiddleSquareOfEdge([nr, nc], [areaRow, areaCol]);
+        if (middle && state.board[middle[0]][middle[1]] === player) return true;
+      }
+      return false;
+    }
+    
+    function isStartingArea(areaRow, areaCol, player) {
+      if (player === 'black') return areaRow === 5 && areaCol === 0;
+      return areaRow === 0 && areaCol === 5;
+    }
+    
+    function canPlaceStone(row, col) {
+      if (state.gameOver || state.board[row][col] !== null) return false;
+      if (getStonesRemaining() <= 0) return false;
+      
+      const areaRow = Math.floor(row / AREA_SIZE);
+      const areaCol = Math.floor(col / AREA_SIZE);
+      const player = state.currentPlayer;
+      
+      // First turn: only starting area
+      if (state.turnNumber === 1 || (state.turnNumber === 2 && player === 'white' && state.stonesPlacedThisTurn === 0)) {
+        return isStartingArea(areaRow, areaCol, player);
+      }
+      
+      // Adding rule for playing in own starting area
+      if (isStartingArea(areaRow, areaCol, player) && getAreaControl(areaRow, areaCol) === player) return true;
+      
+      // Already have stone in this area
+      // if (hasStoneInArea(areaRow, areaCol, player)) return true;
+      
+      // removelogs
+      // console.log("Checking connection");
+      console.log(hasConnectionToArea(areaRow, areaCol, player));
+      
+      // Have connection from neighboring area
+      return hasConnectionToArea(areaRow, areaCol, player);
+    }
+    
+    function handleCellClick(row, col) {
+      // removelogs
+      // console.log("Clicked a cell "+row+":"+col)
+      
+      if (!canPlaceStone(row, col)) return;
+      
+      // Fixing because below appends copy of an object
+      // stateHistory.push(state);
+      // stateHistory.push(Object.entries(state).forEach(([key, value]) => {key = value}));
+      stateHistory.push(structuredClone(state));
+      
+      state.board[row][col] = state.currentPlayer;
+      state.stonesPlacedThisTurn++;
+      state.lastPlayerPassed = false;
+      
+      addLog(`${capitalize(state.currentPlayer)} placed at ${COLS[col]}${BOARD_SIZE - row}`);
+      
+      if (isStartingArea(Math.floor(row/AREA_SIZE), Math.floor(col/AREA_SIZE), (state.currentPlayer === 'black') ? 'white' : 'black')) {
+        if (getAreaControl(Math.floor(row/AREA_SIZE), Math.floor(col/AREA_SIZE)) === state.currentPlayer) {
+          endGame(capture_by = state.currentPlayer);
+        }
+      } else if (getStonesRemaining() <= 0) {
+        endTurn();
+      }
+      
+      render();
+    }
+    
+    function pass() {
+      if (state.gameOver) return;
+      
+      addLog(`${capitalize(state.currentPlayer)} passed`);
+      
+      if (state.lastPlayerPassed) {
+        endGame();
+      } else {
+        state.lastPlayerPassed = true;
+        endTurn();
+      }
+      
+      render();
+    }
+    
+    function saveStones() {
+      if (state.gameOver || state.turnNumber === 1 || (state.turnNumber === 2 && state.stonesPlacedThisTurn === 0)) return;
+      
+      addLog(`${capitalize(state.currentPlayer)} saved ${getStonesRemaining()} stones`);
+      
+      if (state.currentPlayer === 'black') {
+        state.stonesRemainingBlack = getStonesRemaining();
+      } else {
+        state.stonesRemainingWhite = getStonesRemaining();
+      }
+      
+      endTurn();
+      
+      render();
+    }
+    
+    function endTurn() {
+      // removelogs
+      console.log("End of turn")
+      
+      state.currentPlayer = state.currentPlayer === 'black' ? 'white' : 'black';
+      state.stonesPlacedThisTurn = 0;
+      // potential bug
+      // if (state.currentPlayer === 'black') state.turnNumber++;
+      // fixing
+      state.turnNumber++;
+      
+      // Auto-pass if no legal moves
+      if (!hasAnyLegalMove()) {
+        addLog(`${capitalize(state.currentPlayer)} has no legal moves - auto-pass`);
+        if (state.lastPlayerPassed) {
+          endGame();
+        } else {
+          state.lastPlayerPassed = true;
+          endTurn();
+        }
+      }
+    }
+    
+    function hasAnyLegalMove() {
+      for (let r = 0; r < BOARD_SIZE; r++) {
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          if (canPlaceStone(r, c)) return true;
+        }
+      }
+      return false;
+    }
+    
+    function endGame(capture_by = null) {
+      state.gameOver = true;
+      
+      if (!capture_by) {
+        let blackAreas = 0, whiteAreas = 0;
+        
+        for (let ar = 0; ar < 6; ar++) {
+          for (let ac = 0; ac < 6; ac++) {
+            const control = getAreaControl(ar, ac);
+            if (control === 'black') blackAreas++;
+            else if (control === 'white') whiteAreas++;
+          }
+        }
+        
+        if (blackAreas > whiteAreas) state.winner = 'black';
+        else if (whiteAreas > blackAreas) state.winner = 'white';
+        else state.winner = 'tie';
+      } else { state.winner = state.currentPlayer }
+      
+      const winnerText = state.winner === 'tie' ? "It's a Tie!" : `${capitalize(state.winner)} Wins!`;
+      document.getElementById('winner-text').textContent = winnerText;
+      document.getElementById('game-over').classList.remove('hidden');
+      addLog(`Game Over: ${winnerText}`);
+    }
+    
+    function countAreas(player) {
+      let count = 0;
+      for (let ar = 0; ar < 6; ar++) {
+        for (let ac = 0; ac < 6; ac++) {
+          if (getAreaControl(ar, ac) === player) count++;
+        }
+      }
+      return count;
+    }
+    
+    // Adding undo move functionality
+    function undoMove() {
+      addLog(`Undo attempt by ${state.currentPlayer}`)
+      if (state.gameOver || state.TurnNumber === 1) return;
+      
+      let previousState = stateHistory.pop();
+      
+      state = { ...previousState }
+      
+      addLog(`Undo successful by ${state.currentPlayer}`)
+      
+      render();
+    }
+    
+    function render() {
+      // Update cells
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const r = parseInt(cell.dataset.row);
+        const c = parseInt(cell.dataset.col);
+        const stone = state.board[r][c];
+        
+        // Clear existing stone
+        cell.innerHTML = '';
+        cell.classList.remove('occupied', 'black-control', 'white-control');
+        
+        if (stone) {
+          const stoneEl = createDiv(`stone ${stone}`, '');
+          cell.appendChild(stoneEl);
+          cell.classList.add('occupied');
+        }
+        
+        // Area control highlighting
+        const areaRow = Math.floor(r / AREA_SIZE);
+        const areaCol = Math.floor(c / AREA_SIZE);
+        const control = getAreaControl(areaRow, areaCol);
+        if (control === 'black') cell.classList.add('black-control');
+        else if (control === 'white') cell.classList.add('white-control');
+      });
+      
+      // Update info
+      document.getElementById('current-player').textContent = 
+        state.gameOver ? 'Game Over' : `${capitalize(state.currentPlayer)}'s Turn`;
+      document.getElementById('stones-remaining').textContent = 
+        state.gameOver ? '' : `Stones: ${getStonesRemaining()} remaining`;
+      document.getElementById('save-stones').textContent = 
+        (state.gameOver || state.turnNumber === 1 || (state.turnNumber === 2 && state.stonesPlacedThisTurn === 0)) ? 'Save stones' : `Save stones: ${getStonesRemaining()}`;
+      document.getElementById('black-score').textContent = countAreas('black');
+      document.getElementById('white-score').textContent = countAreas('white');
+      document.getElementById('btn-pass').disabled = state.gameOver;
+      document.getElementById('btn-undo').disabled = state.gameOver || state.turnNumber === 1;
+      document.getElementById('btn-save').disabled = state.gameOver || state.turnNumber === 1 || (state.turnNumber === 2 && state.stonesPlacedThisTurn === 0);
+    }
+    
+    function addLog(message) {
+      const log = document.getElementById('log');
+      const entry = createDiv('log-entry', message);
+      log.insertBefore(entry, log.firstChild);
+    }
+    
+    function capitalize(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
